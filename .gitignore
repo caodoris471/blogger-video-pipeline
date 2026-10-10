@@ -1,0 +1,27 @@
+# 里程碑快照（与根目录当前版重复，不上传）
+_archive/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 运行时生成的敏感/大文件（登录态、下载产物、转写结果）
+cookies*.txt
+*.json
+*.mp4
+*.m4a
+*.srt
+*.wav
+login_profile/
+raw_downloads/
+videos/
+Whisper转写/
+*.db
+
+# 系统
+.DS_Store
+Thumbs.db
