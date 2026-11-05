@@ -1,5 +1,7 @@
 # Instagram 抓取流程（Playwright 登录 + yt-dlp 下载）
 
+> **2026-11-06 无水印要求：** 下载先进入 `01_过程稿_临时资料/无水印待验/`，逐条全片复核，通过后才能转写与交付。优先使用 [免费本机工具路线](open-source-downloaders.md)，失败换源及验收执行 [无水印下载规范](watermark-free-download.md)；下方历史案例的下载成功不代表已验无水印。
+
 > **状态**：✅ 已跑通（2026-09-13 实战 @beautiebyvictoria 20 Reels）  
 > **关键依赖**：`Playwright + Edge 独立 profile`（登录态）→ `yt-dlp + cookies.txt`（下载 + caption）
 

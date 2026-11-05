@@ -39,7 +39,7 @@
 
 ### 🔧 原理
 
-博主账号 → 获取可访问的视频列表 → 按条件筛选 → 平台工具下载 MP4 / 提取 M4A → faster-whisper 本地转写 → 生成结构化 Markdown → AI 提炼并重写 → 差异检查与归档。小红书、抖音、快手等流程使用 MediaCrawler；其他平台按参考文档调用 yt-dlp 或视频号工具。转写在本地运行，无需付费转写 API；改写使用宿主 Agent 的模型，模型服务、代理或第三方数据服务可能另有费用。
+博主账号 → 获取可访问的视频列表 → 按条件筛选 → 免费本机工具取得候选视频 → 适配免费来源换源 → 全片无水印复核与验收 → 从已验视频提取 M4A → faster-whisper 本地转写 → 生成结构化 Markdown → AI 提炼并重写 → 差异检查与归档。小红书、抖音、快手的下载优先使用对应免费工具；已有 MediaCrawler 可在其许可范围内完成清单采集，其他平台调用 yt-dlp 或视频号工具。转写在本地运行，无需付费转写 API；改写使用宿主 Agent 的模型，模型服务、代理或运行资源可能另有费用。
 
 ## ✨ 功能特性
 
@@ -47,7 +47,9 @@
 |---|---|---|
 | 账号采集 | 提供 8 个平台的账号列表、下载与登录流程 | ✅ 已有流程与历史案例 |
 | 视频筛选 | 按时间范围及实际取得的点赞、播放、评论等字段筛选 | ✅ 依平台返回字段而定 |
-| 素材留存 | 保留源视频与音频，统一编号和文件命名 | ✅ |
+| 素材留存 | 仅交付已复核无水印的完整视频；保留来源与验收记录 | ✅ 已加入待验目录与交付检查 |
+| 免费工具路线 | XHS-Downloader / Evil0ctal API / KS-Downloader / yt-dlp / 视频号现有工具 | ✅ 已核查文档并纳入路由；新增后端尚未逐平台安装实测 |
+| 免费网站备用 | cobalt / TikSave / TubeDown / FDown，按平台分配网页入口 | ✅ 已纳入流程；真实下载尚未逐站实测 |
 | 语音转写 | 本地 CPU 转写，输出带时间轴的 SRT 与文本 | ✅ |
 | 研究笔记 | 元信息、核心观点、关键点、逐字稿、金句、行动建议 | ✅ 由脚本与 AI 配合完成 |
 | 脚本改写 | 单独生成新标题与口播文案，交付前检查差异 | ✅ 需要宿主 AI |
@@ -67,6 +69,16 @@
 | Instagram | 专用浏览器登录 + Cookie + yt-dlp 等 | 登录、可能的双重验证及平台限流 |
 
 以上为仓库 **2026 年 9 月的历史流程与实测记录**，本次说明更新没有重新跑八平台采集。执行前应先验证当前可达性；“全量”指当前账号权限与接口允许枚举的范围，不保证取得删除、私密、受限或平台未返回的视频。各平台也不保证同时提供点赞、播放、收藏、评论等全部字段。细节见各 [平台参考文档](references/)。
+
+### 无水印下载要求
+
+视频只在全片复核无水印后进入正式素材目录；包括平台水印、移动账号 ID、片尾标记和画面内作者 Logo。发现水印就换源，无法确认或找不到干净来源时报告未完成，不拿带水印文件凑数。网站名称和文件名不能作为无水印证明；本项目没有宣称能自动识别或擦除所有水印。
+
+优先使用 [八平台免费本机工具路线](references/open-source-downloaders.md)：小红书 XHS-Downloader、抖音 Evil0ctal 自托管 API、快手 KS-Downloader、海外/B站 yt-dlp、视频号现有工具。新增后端已核查上游文档和许可证，尚未逐平台部署实测。MediaCrawler 有非商业学习限制，视频号现有工具为 MIT + Commons Clause；不宣传所有依赖均无限制开源或可任意商用。
+
+保留免费网站备用：[cobalt](https://cobalt.tools/)（TikTok、YouTube、Instagram 等，以当前服务范围为准）、[TikSave](https://tiksave.io/zh-cn)（TikTok）、[TubeDown](https://tubedown.cn/youtube)（YouTube）、[FDown](https://fdown.net/)（Facebook 单作品）。龙猫因收费已排除。2026-11-06 未逐站完成真实视频下载；cobalt 网页入口与 API 授权条件分别处理，不硬编码未授权公共 API。
+
+详见 [无水印下载、网站流程与验收](references/watermark-free-download.md)。`verify_watermark_free.py` 提供 `plan`、`init`、`check`、`promote`；它验证文件 SHA-256、数量、复核记录和媒体有效性，视觉复核仍须实际全片审看。视频号先下载待验，复核后加 `--skip-download` 续跑。
 
 ## 🚀 快速开始
 
@@ -122,6 +134,8 @@ GitHub 或海外平台无法连接时，先确认本机网络和实际可用的�
 | 运行环境 | [WorkBuddy](https://www.codebuddy.ai/workbuddy) / 可适配的 Agent | 读取 Skill、执行命令、调用模型 | 按宿主官方说明安装；Codex / Claude Code 先检查适配 |
 | 运行环境 | [Python](https://www.python.org/) | 执行配套脚本 | 现有流程使用 Python 3.12；建议使用独立环境 |
 | 软件 | [FFmpeg](https://ffmpeg.org/) · [Git](https://git-scm.com/) | 音视频处理、下载仓库 | 官网安装并加入 PATH |
+| 软件（按需） | [XHS-Downloader](https://github.com/JoeanAmier/XHS-Downloader) · [KS-Downloader](https://github.com/JoeanAmier/KS-Downloader) | 小红书 / 快手免费本机下载 | 上游 README；Python ≥3.12；GPL-3.0；新增后端尚未逐平台部署实测 |
+| 软件（按需） | [Evil0ctal API](https://github.com/Evil0ctal/Douyin_TikTok_Download_API) · [lux](https://github.com/iawia002/lux) | 抖音本机 API / 跨平台 CLI 备用 | 按上游部署说明；免费本机运行，分别为 Apache-2.0 / MIT |
 | 软件 | [MediaCrawler](https://github.com/NanmiCoder/MediaCrawler) | 小红书、抖音、快手等采集 | 按目标平台参考与其官方说明部署 |
 | 软件 | [视频号下载工具](https://github.com/ltaoo/wx_channels_download) | 视频号列表、下载与解密 | 仅视频号任务需要；按平台参考部署并启动本地服务 |
 | Python 包 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 本地转写、平台视频下载 | 在选定的 Python 环境中使用 pip 安装 |
@@ -151,7 +165,7 @@ GitHub 或海外平台无法连接时，先确认本机网络和实际可用的�
 | 1 | 确认账号、指标、时间、语言 / 语气和登录态选项 | Agent + 用户任务信息 |
 | 2 | 检查平台可达性、字段和小样本下载 | 对应平台参考与采集工具 |
 | 3 | 建项目目录，列清单并筛选 | 采集工具 + `collect_videos_*.py` 等 |
-| 4 | 下载源视频、提取音频，校验编号关联 | 平台工具 / yt-dlp + FFmpeg |
+| 4 | 免费本机工具下载到待验目录，按平台换源，全片复核后归集、提取音频 | 免费工具 / 免费网站备用 + `verify_watermark_free.py` + FFmpeg |
 | 5 | 本地转写，保留 SRT 和文本 | faster-whisper |
 | 6 | 生成逐字稿，补齐观点、关键点和行动建议 | `generate_md_timed.py` + AI |
 | 7 | 重新组织标题与口播，单独保存改写稿 | AI + 可选的提取脚本 |
@@ -159,10 +173,11 @@ GitHub 或海外平台无法连接时，先确认本机网络和实际可用的�
 
 标准产物位于 `01-视频清单/`、`02-Whisper转写/`、`03-逐字稿MD/`、`04-原视频脚本改写/`；`00-操作手册/` 和 `99-生成脚本/` 保存任务说明与本次脚本。视频、转写和稿件使用一致编号。
 
-完整 SOP 见 [SKILL.md](SKILL.md)；平台步骤见 [references/](references/)，视频号优先读 [专用流程](references/platform-wxchannels.md)。交付前执行 `python scripts/verify_rewrite_distinct.py <项目根>`，通过后再交付；差异检查不能代替事实核对和版权判断。
+完整 SOP 见 [SKILL.md](SKILL.md)；平台步骤见 [references/](references/)，视频号优先读 [专用流程](references/platform-wxchannels.md)。转写与交付前先执行 `python scripts/verify_watermark_free.py check <项目根>`，再执行 `python scripts/verify_rewrite_distinct.py <项目根>`，通过后再交付；差异检查不能代替事实核对和版权判断。
 
 ## ❓ 常见问题
 
+- **免费工具/网站保证绝对无水印吗？** 不保证。只交付实际全片复核通过的文件；工具或网站声称无水印仍须检查。作者烧录的标记找不到干净源就判未完成；不自动裁切/遮挡来冒充原片。
 - **装好 Skill 就能直接批量跑吗？** 还需要宿主工具、依赖、项目路径和目标平台登录。没有统一安装脚本，先让 Agent 做环境与小样本检查。
 - **为什么没有抓到“全部视频”？** 接口、登录权限、限流和账号可见范围都会影响枚举；应报告实际取得的数量、失败项与缺失字段，不把未取到当成不存在。
 - **筛选结果为 0 怎么办？** 核对字段是否返回、指标类型和时间范围；需要扩大范围时先确认新条件，不自行降低阈值。

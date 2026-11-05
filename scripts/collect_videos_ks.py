@@ -26,7 +26,7 @@ BASE_DIR = Path(r"D:/1-workbuddy工作文件/跨境/唐子棋_快手视频扒取
 JSONL_PATH = Path(r"D:/1-workbuddy工作文件/跨境/MediaCrawler/data/kuaishou/jsonl/creator_contents_2026-09-11.jsonl")
 # ======================================
 
-SRC_DIR = BASE_DIR / "02-Whisper转写" / "视频源文件"
+SRC_DIR = BASE_DIR / "01_过程稿_临时资料" / "无水印待验"
 LIST_DIR = BASE_DIR / "01-视频清单"
 
 
@@ -161,7 +161,7 @@ def main():
     with open(LIST_DIR / "videos_index.json", 'w', encoding='utf-8') as f:
         json.dump(index, f, ensure_ascii=False, indent=2)
     print(f"\n📝 索引: {LIST_DIR / 'videos_index.json'}")
-    print(f"✅ 成功: {ok}/{len(hits)}")
+    print(f"已归集（待无水印验收）: {ok}/{len(hits)}")
 
 
 if __name__ == "__main__":

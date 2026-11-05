@@ -12,6 +12,7 @@ Whisper 批量转写脚本 - 视频号视频 → SRT 逐字稿
 import os
 import sys
 from pathlib import Path
+from verify_watermark_free import require_clean
 
 # ============== 关键：设置国内镜像（HuggingFace 在国内访问受限） ==============
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
@@ -105,6 +106,8 @@ def transcribe_one(model, video_path: Path, dst_dir: Path) -> dict:
 
 
 def main():
+    if not require_clean(BASE_DIR):
+        sys.exit(2)
     # 1. 检查源目录
     if not SRC_DIR.exists():
         SRC_DIR.mkdir(parents=True)

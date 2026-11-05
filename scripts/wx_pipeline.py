@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 ============================================================================
-微信视频号 · 一条命令全自动流水线（固化，禁止再造轮子）
+微信视频号 · 自动下载待验 → 无水印复核 → 续跑转写
 ============================================================================
 用法（唯一入口，任何视频号任务都跑这个）：
 
@@ -21,12 +21,13 @@
     --min-likes 只保留点赞数 >= N 的视频，默认 0（不过滤）
     --model     whisper 模型，默认 tiny（large-v3 在 hf-mirror 常 401）
     --rewrite   同步生成 04-改写脚本（情感/人生类视频号模板）
-    --skip-download     已有 mp4，跳过下载直接转写
+    --skip-download     使用已完成无水印复核并 promote 的 mp4 续跑
     --skip-transcribe   只下载不转写
 
-流水线（全自动，零人工点击）：
+流水线（Agent 自动操作工具）：
     1 status 检查 → 2 search 拿 username → 3 feed/list 翻页拉全量清单
-    → 4 直链下载加密文件 → 5 POST decrypt 解密 → 6 Whisper 转写
+    → 4 直链下载加密文件 → 5 POST decrypt 解密到待验目录（退出码 2）
+    → 全片复核并 promote → 相同参数加 --skip-download → 6 Whisper 转写
     → 7 按 SRT 逐段重建分时段 MD（繁转简） → 8 生成总索引
 
 前置条件（唯一的、一次性的人工动作）：
@@ -35,6 +36,7 @@
 ============================================================================
 """
 import argparse
+from verify_watermark_free import STAGING, require_clean
 import datetime
 import json
 import os
@@ -643,7 +645,19 @@ def main():
 
     # 下载
     if not a.skip_download:
-        step_download(vids, video_dir)
+        step_download(vids, BASE / STAGING)
+        log("候选视频已下载到无水印待验目录；尚未达到交付标准。")
+        log("请按 references/watermark-free-download.md 完成 init、全片复核和 promote。")
+        log("通过后以相同参数加 --skip-download 续跑；当前返回 2 表示等待复核。")
+        return 2
+
+    if not require_clean(BASE, expected_count=len(vids)):
+        return 2
+    expected_names = {sanitize(((v.get("objectDesc") or {}).get("description") or "").strip().split("\n")[0]) + ".mp4"
+                      for v in vids}
+    if {p.name for p in video_dir.glob("*.mp4")} != expected_names:
+        log("❌ 已验素材与本次筛选作品不一致，请核对清单后重新验收。")
+        return 2
 
     # 转写 + MD
     if not a.skip_transcribe:

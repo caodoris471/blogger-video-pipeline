@@ -5,7 +5,7 @@ collect_videos_bilibili.py - B站视频源文件归集 + 重命名工具
 【功能】
 如果 B站视频通过 yt-dlp 单独下载到任意目录，按本地
 `01-视频清单/videos_index.json` 映射关系，归集到项目
-  02-Whisper转写/视频源文件/{NNN}-{完整标题}.mp4
+  01_过程稿_临时资料/无水印待验/{NNN}-{完整标题}.mp4
 
 【适用场景】
 - yt-dlp 用 BVID 单条下载后文件名是标题（已含 `…`），直接复制即可
@@ -42,7 +42,7 @@ SOURCE_DIR = BASE_DIR / "raw_downloads"
 
 # ============== 内部逻辑 ==============
 INDEX_FILE = BASE_DIR / "01-视频清单" / "videos_index.json"
-TARGET_DIR = BASE_DIR / "02-Whisper转写" / "视频源文件"
+TARGET_DIR = BASE_DIR / "01_过程稿_临时资料" / "无水印待验"
 
 
 def safe(name: str, max_len: int = 60) -> str:
@@ -122,7 +122,7 @@ def main():
 
     print()
     print("=" * 60)
-    print(f"✅ 成功: {len(success)} 个")
+    print(f"已归集（待无水印验收）: {len(success)} 个")
     print(f"❌ 失败: {len(failed)} 个")
     if failed:
         print()

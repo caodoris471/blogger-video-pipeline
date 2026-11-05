@@ -6,7 +6,7 @@ collect_videos_xhs.py - 小红书视频源文件归集 + 重命名工具
 把 MediaCrawler 下载目录里以 note_id 命名的视频（如
   6a71c96d000000002701d65d.mp4）
 按本地 `01-视频清单/note_id_to_seq.json` 映射关系，归集到项目
-  02-Whisper转写/视频源文件/{NNN}-{完整标题}.mp4
+  01_过程稿_临时资料/无水印待验/{NNN}-{完整标题}.mp4
 
 【使用方式】
 1. 把脚本拷到项目 99-生成脚本/ 下
@@ -42,7 +42,7 @@ SOURCE_DIR = BASE_DIR.parent.parent / "MediaCrawler" / "data" / "xhs" / "videos"
 
 # ============== 内部逻辑（无需改） ==============
 INDEX_FILE = BASE_DIR / "01-视频清单" / "note_id_to_seq.json"
-TARGET_DIR = BASE_DIR / "02-Whisper转写" / "视频源文件"
+TARGET_DIR = BASE_DIR / "01_过程稿_临时资料" / "无水印待验"
 
 
 def safe(name: str, max_len: int = 60) -> str:
@@ -117,7 +117,7 @@ def main():
 
     print()
     print("=" * 60)
-    print(f"✅ 成功: {len(success)} 个")
+    print(f"已归集（待无水印验收）: {len(success)} 个")
     print(f"❌ 失败: {len(failed)} 个")
     if failed:
         print()

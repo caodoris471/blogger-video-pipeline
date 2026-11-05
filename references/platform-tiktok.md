@@ -1,5 +1,7 @@
 # TikTok 抓取完整指南（博主视频全量扒取）
 
+> **2026-11-06 无水印要求：** 下载先进入 `01_过程稿_临时资料/无水印待验/`，逐条全片复核，通过后才能转写与交付。优先使用 [免费本机工具路线](open-source-downloaders.md)，失败换源及验收执行 [无水印下载规范](watermark-free-download.md)；下方历史案例的下载成功不代表已验无水印。
+
 > 状态：✅ 已跑通（2026-09-13 实测 9 条 @catofthestreet）
 > 关键依赖：`yt-dlp + --impersonate Chrome-136 + curl_cffi 0.16 + socks5 代理`
 
@@ -8,8 +10,8 @@
 | 阶段 | 命令 |
 |---|---|
 | 列表抓取 | `yt-dlp --proxy socks5://127.0.0.1:10808 --flat-playlist --no-warnings --dump-json --skip-download "https://www.tiktok.com/@<user>"` |
-| 单视频音频 | `yt-dlp --proxy socks5://127.0.0.1:10808 --impersonate Chrome-136 -x --audio-format m4a -o "<seq>-<title>.%(ext)s" "<video_url>"` |
-| **单视频 mp4 + m4a（🔴 推荐）** | `yt-dlp --proxy socks5://127.0.0.1:10808 --impersonate Chrome-136 -f "download/h264_720p/download" -o "<abs_path>.mp4" "<video_url>"` 后 `-x --audio-format m4a` 同名抽音频 |
+| 单视频音频（历史命令，不可单独作视频交付） | `yt-dlp --proxy socks5://127.0.0.1:10808 --impersonate Chrome-136 -x --audio-format m4a -o "<seq>-<title>.%(ext)s" "<video_url>"` |
+| **单视频 mp4 + m4a（🔴 推荐）** | `yt-dlp --proxy socks5://127.0.0.1:10808 --impersonate Chrome-136 -f "best[ext=mp4][format_id!*=download][format_note!*=?watermarked]/best[format_id!*=download][format_note!*=?watermarked]" -o "<待验目录绝对路径>/%(id)s.%(ext)s" "<video_url>"` ；验收后从同一已验视频用 FFmpeg 抽 M4A |
 | Whisper 转写 | `HF_HUB_OFFLINE=1 python transcribe_with_whisper.py`（项目内脚本） |
 
 ## 已验证实测结论（2026-09-13）
@@ -67,22 +69,18 @@ yt-dlp --impersonate Chrome-136 ...
 
 **症状**：早期实现为了"省空间"，只下 `-x --audio-format m4a`（400KB/条），结果没有任何完整视频可供二次剪辑 / 参考画面 / 平台再发布。
 
-**修正**：默认下完整视频 mp4（TikTok `download` 单文件最稳），同时保留 m4a 供 Whisper 转写：
+**修正**：下载完整候选视频并排除已知带水印格式；无合格格式改走 cobalt / TikSave。验收后从同一个本地文件提取 m4a：
 
 ```bash
 # 1. 下完整 mp4
 yt-dlp --proxy socks5://127.0.0.1:10808 \
        --impersonate Chrome-136 \
-       -f "download/h264_720p/download" \
-       -o "<abs_path>.mp4" \
+       -f "best[ext=mp4][format_id!*=download][format_note!*=?watermarked]/best[format_id!*=download][format_note!*=?watermarked]" \
+       -o "<待验目录绝对路径>/%(id)s.%(ext)s" \
        "<video_url>"
 
-# 2. 再抽 m4a 供 Whisper（不下载视频流）
-yt-dlp --proxy socks5://127.0.0.1:10808 \
-       --impersonate Chrome-136 \
-       -x --audio-format m4a \
-       -o "<abs_path>.%(ext)s" \
-       "<video_url>"
+# 2. 验收并 promote 后，从已验视频抽音频，不重新请求作品 URL
+ffmpeg -i "<已验视频绝对路径>" -vn -c:a aac "<同名音频绝对路径>.m4a"
 ```
 
 **根因**：TikTok 视频短（15-60s）+ 质量本就 720p，单条 mp4 1-2MB，9 条总共 ~10MB —— 跟 400KB×9 的音频比也就多 7MB，**这个开销完全可接受**。**禁止**再走"只下音频"路径。
@@ -97,7 +95,7 @@ yt-dlp --proxy socks5://127.0.0.1:10808 \
 import subprocess
 from pathlib import Path
 
-VIDEO_DIR = Path("/d/.../02-Whisper转写/视频源文件")
+VIDEO_DIR = Path("/d/.../01_过程稿_临时资料/无水印待验")
 out_abs = str(VIDEO_DIR / "001-xxx.mp4")  # 绝对路径
 
 subprocess.run([

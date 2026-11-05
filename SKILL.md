@@ -1,6 +1,6 @@
 ---
 name: blogger-video-pipeline
-description: 对标博主视频批量采集 → 逐字稿与改写脚本。面向自媒体创作者、编导和内容研究者，按账号、时间与可用互动指标筛选视频，下载素材、本地转写、提炼观点并生成独立改写稿。提供视频号、小红书、抖音、B站、快手、YouTube、TikTok、Instagram 八平台流程；用于批量账号研究与脚本整理，执行前核实平台可达性。
+description: 对标博主视频批量采集 → 逐字稿与改写脚本。面向自媒体创作者、编导和内容研究者，按账号、时间与可用互动指标筛选视频，按无水印标准下载并验收素材、本地转写、提炼观点并生成独立改写稿。提供视频号、小红书、抖音、B站、快手、YouTube、TikTok、Instagram 八平台流程；用于批量账号研究与脚本整理，执行前核实平台可达性。
 metadata:
   agent_created: true
 ---
@@ -12,6 +12,15 @@ metadata:
 提供微信视频号、小红书、抖音、B站、快手、YouTube、TikTok、Instagram 八平台操作流程。历史实测见下表；开工前核实当前可达性与返回字段，“全量”以账号权限和接口可枚举范围为准。现有执行规则以 WorkBuddy 与 Windows 工具链为基础；其他宿主先检查工具适配。
 
 用户输入通常包括：平台 / 博主主页、时间范围、筛选指标、改写语言与语气、登录态保留选项。完整结果包括视频清单、MP4/M4A、SRT、结构化逐字稿和改写稿。若筛选无命中，只提出调整时间或阈值的建议，确认后再变更；不擅自降低条件。详细介绍与安装见 [README.md](README.md)。
+
+## 无水印交付（2026-11-06 更新，所有平台强制）
+
+- 视频必须无水印，包括平台移动水印、账号 ID、下载站标记及作者烧录的 Logo。下载成功、解密成功或网站写着“无水印”都不能代替验收；有水印或无法确认就换源，找不到合格源则报告未完成，不降级交付。
+- 下载前必读 [references/open-source-downloaders.md](references/open-source-downloaders.md) 与 [references/watermark-free-download.md](references/watermark-free-download.md)。优先免费本机工具：小红书 XHS-Downloader、抖音 Evil0ctal API、快手 KS-Downloader、海外/B站 yt-dlp、视频号现有专用工具。cobalt、TikSave、TubeDown、FDown 作为适配平台的免费网站备用；收费龙猫已排除。不把公开源码等同于许可无限制或本机已实测。
+- 候选文件先放 `01_过程稿_临时资料/无水印待验/`。逐条全片复核并保存来源、SHA-256 与复核证据；通过 `scripts/verify_watermark_free.py` 的 check / promote 后才进入 `02-Whisper转写/视频源文件/`。只看抽帧不能填写全片通过，不能裁切/遮盖/擦除水印后冒充原片。
+- TikTok 禁止默认选择 `download` / `download_addr` 格式；本机干净源失败后切 cobalt → TikSave。音频从同一已验视频提取，不重新下载另一版本。
+- 视频号改为两阶段：先下载待验（退出码 2），复核并 promote 后加 `--skip-download` 续跑；这一要求优先于下方历史“一条命令全部完成”描述。其他平台脚本及旧项目已有视频也必须验收。
+- 脚本只验证复核记录、文件一致性与媒体有效性，不执行视觉水印识别；任何未实际全片审看的文件保持待验。交付前运行 `python scripts/verify_watermark_free.py check <项目根>`，失败不得报“全部完成”。
 
 ## TL;DR（30 秒版）
 
@@ -25,7 +34,7 @@ metadata:
 2. **6/7 步**（按序执行，视频号才走第 7 步清理）：
    1. 平台可行性评估 → 给用户看实测结果表
    2. 搭项目脚手架（标准 6 项目录结构）
-   3. 获取视频（按平台分路径）
+   3. 获取候选视频 → 适配网站换源 → 全片无水印复核 → 验收归集（按无水印规范）
    4. Whisper 转写（CPU int8，约 5-20x 实时）
    5. 生成 MD + AI 提炼（6 模块填满、零 placeholder）
    6. **改写新视频脚本**：基于转写结果，生成同主题/同内容但**全新表达**的视频脚本（新标题 + 新口播文案），独立存放到 `04-原视频脚本改写/`
@@ -33,7 +42,7 @@ metadata:
 
 输出位置/形式不问了，直接走「标准项目目录结构」默认值。
 
-> **🔴 视频号任务：收到请求后直接跳 `references/platform-wxchannels.md`，只跑 `scripts/wx_pipeline.py` 一条命令，流程已固化、不得临场改动，也不得让用户手动点任何按钮。**
+> **🔴 视频号任务：收到请求后直接跳 `references/platform-wxchannels.md`，以 `scripts/wx_pipeline.py` 获取候选视频，完成无水印复核与 promote 后加 `--skip-download` 续跑；Agent 操作工具，不让用户逐条点下载。**
 
 ## 适用边界
 
@@ -62,7 +71,7 @@ metadata:
 | 1 | **浏览器 Profile 保护** | 海外平台登录只能 `项目目录/login_profile/`，**绝对禁止** `--user-data-dir` 指真实 Chrome / NTFS junction（详见 SKILL.md 段 + `chrome-extension-recovery.md`） |
 | 2 | **改写脚本语言匹配原视频** | 海外平台 → 英文；国内平台 → 中文；禁止「（在此填入）」空模板（`extract_rewrite_script.py` 已自动识别 language 字段） |
 | 3 | **🔴 改写必须与逐字稿不同（有闸门）** | 改写 ≠ 复制逐字稿，必须有新 Hook / 新口播 / 新 CTA，原文只放 `Original Core Script (Reference)` 区。**纯规则脚本（如 `step_rewrite`）不会改写，只会套模板 + 摘原句，产出的 04 会 100% 复制 03**（2026-09-14「人物榜LOOK」教训：04 正文 99-154 行全抄 03，被用户当场指出「和逐字稿一样」）。口播文案**必须由 AI 读逐字稿后亲笔重写**，交付前**必须跑 `python scripts/verify_rewrite_distinct.py <项目根>`**，exit≠0 = 一票否决、重写后才可交付（详见铁律 9） |
-| 4 | **🔴 完整视频双落 mp4+m4a** | `-f "download/..."` 或 `-f "best[ext=mp4]"` 先 mp4、再 `-x --audio-format m4a` 抽音频；**禁只下音频**（2026-09-13 TikTok 教训，二次剪辑必须有 mp4） |
+| 4 | **🔴 完整视频双落 mp4+m4a** | 先下载并验收完整无水印视频，再从同一个本地文件用 FFmpeg 抽 m4a；**禁只下音频**（2026-09-13 TikTok 教训，二次剪辑必须有 mp4） |
 | 5 | **🔴 落盘用绝对路径** | subprocess yt-dlp `-o "xxx.mp4"` 必须 `str(VIDEO_DIR / "xxx.mp4")` 绝对路径 + `cwd=VIDEO_DIR`，否则 mp4 漏到项目根目录（跨项目经验，已加进 `~/.workbuddy/MEMORY.md`） |
 | 6 | **🔴 JSON 数字字段必须 int 转** | MediaCrawler jsonl 里 `liked_count`/`play_count` 是字符串，直接 `int(v.get('k', 0) or 0)` 转 int；否则字符串比较会漏筛（2026-09-13 抖音「23,800 点赞」被漏的教训） |
 | 7 | **🔴 视频号必须全自动，禁用旧版 `md_generator.py`（已废弃，本包不再提供）** | 视频号唯一入口 `scripts/wx_pipeline.py`（搜账号→翻页拉全量→直链下载→decrypt→Whisper→分时段 MD）。**禁止让用户点视频/点下载按钮**（2026-09-14 让用户点了 3 次只拿到 1 条的教训）。**禁止用旧版 `md_generator.py`（已废弃，本包不再提供）**（会把多段 SRT 合并成一坨、头部错挂博主名、还会被后台反复覆盖成占位版）——视频号一律用 pipeline 内建 `step_md()` |
@@ -177,7 +186,7 @@ metadata:
 |---|---|
 | 目录 | `00-操作手册.md` / `01-视频清单/` / `02-Whisper转写/{视频源文件,转写结果}` / `03-逐字稿MD/` / `04-原视频脚本改写/` / `99-生成脚本/` / `models/`（小红书增 `browser_context/`） |
 | 视频标识 | 用项目内连续编号 NNN（`001`/`002`/`...`），不暴露平台 ID 到文件名 |
-| 02 视频源文件 | **🔴 必须同时落 mp4（视频） + m4a（音频）**：TikTok/YouTube 等海外平台默认 `-f "download/h264_720p/download"` 下 mp4，转写再补 m4a 或 `-x` 同步抽 |
+| 02 视频源文件 | **🔴 必须同时落 mp4（视频） + m4a（音频）**：先选无水印完整视频源并验收；音频从同一已验视频用 FFmpeg 提取，不再次请求下载链接 |
 | 02 转写结果 | `{NNN}-{完整标题}_转写.json`（与视频源文件同名，仅后缀不同） |
 | 03 文件名 | `{NNN}-{完整标题}.md`（**连字符 `-` 分隔、用完整标题，不简写、不按下划线**） |
 | 04 文件名 | `{NNN}-{完整标题}-改写脚本.md` |
@@ -187,7 +196,7 @@ metadata:
 | 编号规则 | **一律按筛选维度降序编号**（点赞为主）：001 = 点赞最高。**不按发布时间、不按抓取顺序** |
 | 平台 ID → NNN 映射 | 记录到 `01-视频清单/<platform>_id_to_seq.json`（如 `bvid_to_seq.json`、`note_id_to_seq.json`），便于后续回溯 |
 
-> **🔴 视频文件必须落 mp4（2026-09-13 TikTok 教训）**：之前偷懒只 `-x --audio-format m4a` 抽音频，导致所有海外平台都只有 400KB m4a、没有完整视频，二次剪辑无源。修正后默认 `-f "download/h264_720p/download"` 先落 mp4，再单独抽出 m4a 供 Whisper 用。**任何平台都不能只下音频**。
+> **🔴 视频文件必须落 mp4（2026-09-13 TikTok 教训）**：之前偷懒只 `-x --audio-format m4a` 抽音频，导致所有海外平台都只有 400KB m4a、没有完整视频，二次剪辑无源。先取得完整候选视频，通过无水印验收后从同一个已验文件抽出 m4a 供 Whisper 用。**任何平台都不能只下音频**。
 
 > **🔴 落盘路径必须用绝对路径（2026-09-13 TikTok 教训）**：subprocess.run yt-dlp 时若 `-o "xxx.mp4"` 用相对路径，会把文件写到 subprocess 继承的 cwd（`项目根目录`），而非预期的 `视频源文件/` 子目录。**强制用绝对路径 `-o str(VIDEO_DIR / "xxx.mp4")`** 或显式传 `cwd=VIDEO_DIR`。
 
@@ -284,12 +293,14 @@ target = re.sub(r'\.{2,}\.mp4$', '.mp4', f"{seq:03d}-{safe_title}.mp4")
 - **YouTube**：**完整流程见 `references/platform-youtube.md`**。中国大陆环境下必须同时满足 **本地代理 + 登录 cookie**（`--cookies-from-browser chrome` 或 `--cookies cookies.txt`），否则单视频会触发 Google bot 验证（`Sign in to confirm you’re not a bot`）。先用 `yt-dlp --flat-playlist` 拿列表，再对命中视频单独提取 `view_count`/`upload_date`，最后用 `yt-dlp -f bestaudio` 下载音频。**视频归集**：下载到 `<项目>/raw_downloads/`，然后跑 `99-生成脚本/collect_videos_youtube.py` 按 `video_id` 归集到 `02-Whisper转写/视频源文件/`。
 - **TikTok**：`yt-dlp https://www.tiktok.com/@<user>` 抓主页视频列表 + 下载；风控严、点赞数不稳，先小规模实测再定（可引导用户提供登录 cookie）。
 - **Instagram**：`instaloader --login <你的账号> --no-pictures profile <目标@user>` 抓全量 Reels/帖子 + 元数据（点赞数）；首次需 `pip install instaloader`。备选 `yt-dlp` 单条下载。
-- **微信视频号**：🔴 **按 `references/platform-wxchannels.md` 执行，不要临场发挥**。唯一入口 `scripts/wx_pipeline.py`（一条命令全自动）。**禁止让用户手动点视频/点下载按钮**——这是 2026-09-14 的重大误区，工具自带完整 HTTP API 可批量抓全量。要点：翻页字段 `lastBuffer`、username 在 `infoList[i].contact.username`、直链下载后必须 `POST /api/channels/decrypt?filepath=&key=` 解密、**禁用旧版 `md_generator.py`（已废弃，本包不再提供）**（会把逐字稿合并成一坨 + 错挂博主名）。**视频归集**：不需要，pipeline 直接把 mp4 写到 `02-Whisper转写/视频源文件/`。
+- **微信视频号**：🔴 **按 `references/platform-wxchannels.md` 执行，不要临场发挥**。唯一入口 `scripts/wx_pipeline.py`（一条命令全自动）。**禁止让用户手动点视频/点下载按钮**——这是 2026-09-14 的重大误区，工具自带完整 HTTP API 可批量抓全量。要点：翻页字段 `lastBuffer`、username 在 `infoList[i].contact.username`、直链下载后必须 `POST /api/channels/decrypt?filepath=&key=` 解密、**禁用旧版 `md_generator.py`（已废弃，本包不再提供）**（会把逐字稿合并成一坨 + 错挂博主名）。**视频归集**：pipeline 写待验目录，复核并 promote 后才进入正式素材目录。
 - **抖音**：Web 端通常需登录 cookie；可引导用户用第三方平台（新抖/蝉妈妈）导出视频列表 CSV，再走下载链路。
 - **小红书**：**完整流程见 `references/platform-xhs.md`**。使用 MediaCrawler（GitHub 50k+ stars）+ Playwright 持久化登录态。**分批抓取 ≤30 条/批**，间隔 60-90s。首次需用户扫码登录（**必须 App 上点"登录"确认**，否则 120s 超时）。**视频归集**：MediaCrawler 把视频下载到 `<MediaCrawler>/data/xhs/videos/<note_id>.mp4`，跑 `99-生成脚本/collect_videos_xhs.py` 按 `note_id_to_seq.json` 归集到 `02-Whisper转写/视频源文件/`。
 - **快手**：**完整流程见 `references/platform-ks.md`**。复用小红书 MediaCrawler 方案，但需要 patch `media_platform/kuaishou/login.py`：把 `<p>登录</p>` xpath 改成 `<span class="sidebar-login-button">`，且首次登录需先 `goto("https://www.kuaishou.com/profile/<id>")` 才能看到登录按钮（主页 `/?isHome=1` 不显示）。Whisper 偏好繁体，generate_md.py 加 `pip install zhconv` 后转简体。**视频归集**：下载到 MediaCrawler `data/kuaishou/videos/`，然后跑 `scripts/collect_videos_ks.py` 自动按 photo_id 归集到 `02-Whisper转写/视频源文件/`。
 
 ### 步骤 4：Whisper 转写（AI 端全自动）
+
+先运行 `python scripts/verify_watermark_free.py check <项目根>`，非零退出则继续换源或复核，不加载模型。复制转写脚本时同时复制 `verify_watermark_free.py`。
 
 **已部署场景**（推荐，venv 已存在）：直接用
 
